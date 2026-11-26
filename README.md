@@ -1,5 +1,10 @@
 # Notes App (Desktop)
 
+> **Live demo (browser/PWA):** https://yasin-kik.github.io/NOTES/
+>
+> **Windows installer:** https://github.com/YASIN-KIK/NOTES/releases/latest
+> (download `Notes.Setup.1.0.0.exe`)
+
 ## Features
 - Notes with folders, tags, pin, favorites, trash + restore
 - Markdown editor with live preview and checklists
