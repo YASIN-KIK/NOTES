@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notes Admin</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #16161f; color: #e8e8ee; font-size: 14px; }
+    button { font-family: inherit; cursor: pointer; }
+    .hidden { display: none !important; }
+
+    /* Login */
+    #loginView { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at top, #2a2a44, #16161f 60%); }
+    .card { background: #20202e; border: 1px solid #33334a; border-radius: 14px; padding: 28px; box-shadow: 0 12px 40px rgba(0,0,0,.35); }
+    .login { width: 360px; }
+    .login h1 { margin: 0 0 4px; font-size: 24px; }
+    .login p { margin: 0 0 20px; color: #9a9ab0; font-size: 13px; }
+    input, select { width: 100%; padding: 10px 12px; margin: 6px 0 14px; border: 1px solid #3b3b54; border-radius: 8px; background: #181822; color: #e8e8ee; outline: none; }
+    input:focus, select:focus { border-color: #6c7cff; }
+    .btn { padding: 9px 14px; border: none; border-radius: 8px; background: #5a6fff; color: #fff; font-weight: 600; }
+    .btn:hover { background: #4759e8; }
+    .btn.full { width: 100%; }
+    .btn.ghost { background: transparent; border: 1px solid #3b3b54; color: #c9c9d8; }
+    .btn.danger { background: #c6394a; }
+    .btn.small { padding: 5px 9px; font-size: 12px; }
+    .error { color: #ff7b7b; min-height: 18px; font-size: 13px; }
+
+    /* Layout */
+    header { display: flex; align-items: center; gap: 14px; padding: 16px 28px; background: #1d1d2a; border-bottom: 1px solid #33334a; position: sticky; top: 0; z-index: 5; }
+    header .logo { font-size: 18px; font-weight: 700; }
+    header .logo span { color: #8fa0ff; }
+    header .spacer { flex: 1; }
+    main { max-width: 1120px; margin: 0 auto; padding: 24px; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 22px; }
+    .stat { background: #20202e; border: 1px solid #33334a; border-radius: 12px; padding: 16px; }
+    .stat .label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #9a9ab0; }
+    .stat .value { font-size: 30px; font-weight: 700; margin-top: 6px; }
+    .tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+    .tab { padding: 8px 16px; border: none; border-radius: 8px 8px 0 0; background: transparent; color: #9a9ab0; font-weight: 600; }
+    .tab.active { background: #20202e; color: #fff; }
+    .panel { background: #20202e; border: 1px solid #33334a; border-radius: 0 12px 12px 12px; padding: 18px; }
+    .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+    .toolbar input, .toolbar select { width: auto; flex: 1; min-width: 180px; margin: 0; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #33334a; font-size: 13px; vertical-align: top; }
+    th { color: #9a9ab0; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+    tr:last-child td { border-bottom: none; }
+    .muted { color: #9a9ab0; }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 10px; background: #2e2e44; color: #b9c0ff; font-size: 11px; }
+    .toast { position: fixed; bottom: 20px; right: 20px; background: #2c2c40; border: 1px solid #4a4a66; padding: 12px 16px; border-radius: 10px; z-index: 20; }
+    .note-body { white-space: pre-wrap; max-height: 260px; overflow: auto; background: #181822; border: 1px solid #33334a; border-radius: 8px; padding: 12px; margin-top: 10px; }
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: flex; align-items: center; justify-content: center; z-index: 30; padding: 20px; }
+    .modal-box { background: #20202e; border: 1px solid #44445e; border-radius: 14px; width: min(760px, 100%); max-height: 86vh; overflow: auto; padding: 22px; }
+    .modal-box h2 { margin: 0 0 12px; }
+    .kv { display: grid; grid-template-columns: 150px 1fr; gap: 6px 12px; font-size: 13px; margin-bottom: 18px; }
+    .kv .k { color: #9a9ab0; }
+    .user-note { border: 1px solid #3b3b54; border-radius: 10px; padding: 12px; margin-bottom: 10px; background: #1b1b28; }
+    .user-note .t { font-weight: 700; }
+    .user-note .c { white-space: pre-wrap; margin-top: 6px; color: #cfcfdc; }
+    .folder-pill { display: inline-block; background: #2e2e44; border-radius: 10px; padding: 3px 9px; margin: 0 6px 6px 0; font-size: 12px; }
+    @media (max-width: 800px) { .stats { grid-template-columns: repeat(2, 1fr); } main { padding: 14px; } }
+  </style>
+</head>
+<body>
+  <div id="loginView">
+    <form class="card login" id="loginForm">
+      <h1>Notes Admin</h1>
+      <p>Sign in with the server admin password.</p>
+      <input id="pw" type="password" placeholder="Admin password" autocomplete="current-password" />
+      <div id="loginErr" class="error"></div>
+      <button class="btn full" type="submit">Sign in</button>
+    </form>
+  </div>
+
+  <div id="dashView" class="hidden">
+    <header>
+      <div class="logo">📝 Notes <span>Admin</span></div>
+      <div class="spacer"></div>
+      <button class="btn ghost small" id="exportBtn">Export data</button>
+      <button class="btn ghost small" id="refreshBtn">Refresh</button>
+      <button class="btn ghost small" id="logoutBtn">Sign out</button>
+    </header>
+    <main>
+      <div class="stats">
+        <div class="stat"><div class="label">Users</div><div class="value" id="statUsers">0</div></div>
+        <div class="stat"><div class="label">Notes stored</div><div class="value" id="statNotes">0</div></div>
+        <div class="stat"><div class="label">Folders stored</div><div class="value" id="statFolders">0</div></div>
+        <div class="stat"><div class="label">Skipped signup</div><div class="value" id="statSkips">0</div></div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="users">Users</button>
+        <button class="tab" data-tab="notes">Users' notes</button>
+        <button class="tab" data-tab="mine">My notes</button>
+        <button class="tab" data-tab="skips">Skips</button>
+      </div>
+
+      <div class="panel" id="tab-users">
+        <div class="toolbar"><input id="userSearch" placeholder="Search name or email…" /></div>
+        <table>
+          <thead><tr><th>Name</th><th>Email</th><th>Device</th><th>Notes</th><th>Created</th><th>Last seen</th><th></th></tr></thead>
+          <tbody id="usersBody"></tbody>
+        </table>
+      </div>
+
+      <div class="panel hidden" id="tab-notes">
+        <div class="toolbar">
+          <select id="noteUser"></select>
+          <input id="noteSearch" placeholder="Search notes…" />
+        </div>
+        <table>
+          <thead><tr><th>Title</th><th>Preview</th><th>Updated</th><th></th></tr></thead>
+          <tbody id="notesBody"></tbody>
+        </table>
+        <div id="noteDetail" class="hidden">
+          <h3 id="detailTitle"></h3>
+          <div class="note-body" id="detailBody"></div>
+          <button class="btn ghost small" id="closeDetail">Close</button>
+        </div>
+      </div>
+
+      <div class="panel hidden" id="tab-mine">
+        <div class="toolbar"><button class="btn" id="newAdminNote">+ New note</button><span class="muted" id="mineStatus"></span></div>
+        <div style="display:grid;grid-template-columns:1fr 2fr;gap:14px">
+          <div id="adminNoteList"></div>
+          <div>
+            <input id="adminNoteTitle" placeholder="Note title" />
+            <textarea id="adminNoteBody" placeholder="Write your note here..." style="width:100%;height:260px;padding:12px;border:1px solid #3b3b54;border-radius:8px;background:#181822;color:#e8e8ee;resize:vertical;box-sizing:border-box"></textarea>
+            <div style="display:flex;gap:8px;margin-top:8px"><button class="btn" id="saveAdminNote">Save note</button><button class="btn danger small" id="deleteAdminNote">Delete</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel hidden" id="tab-skips">
+        <table>
+          <thead><tr><th>Device</th><th>When</th></tr></thead>
+          <tbody id="skipsBody"></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+  <div id="userModal" class="modal hidden">
+    <div class="modal-box">
+      <div class="toolbar"><h2 id="detailHeading">User details</h2><div class="spacer" style="flex:1"></div><button class="btn ghost small" id="downloadUserBtn">Download data</button><button class="btn ghost small" id="closeUserModal">Close</button></div>
+      <div id="userMeta" class="kv"></div>
+      <h3 style="margin:0 0 8px">Folders</h3>
+      <div id="userFolders"></div>
+      <h3 style="margin:18px 0 8px">Everything this user wrote</h3>
+      <div id="userNotes"></div>
+    </div>
+  </div>
+  <div id="toast" class="toast hidden"></div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let token = localStorage.getItem('adminToken') || '';
+    let snapshot = { users: [], skips: [], userData: {}, stats: {} };
+    let activeTab = 'users';
+
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const fmt = (s) => { if (!s) return '—'; const d = new Date(s); return isNaN(d) ? String(s) : d.toLocaleString(); };
+    function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.remove('hidden'); setTimeout(() => t.classList.add('hidden'), 2600); }
+    function headers() { return { 'x-admin-token': token }; }
+
+    async function api(url, opts = {}) {
+      const res = await fetch(url, { ...opts, headers: { ...headers(), ...(opts.headers || {}) } });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || ('Request failed (' + res.status + ')'));
+      return data;
+    }
+
+    async function load() {
+      const data = await api('/api/users');
+      snapshot = data;
+      const s = data.stats || {};
+      $('statUsers').textContent = s.totalUsers ?? data.users.length;
+      $('statNotes').textContent = s.totalNotes ?? 0;
+      $('statFolders').textContent = s.totalFolders ?? 0;
+      $('statSkips').textContent = s.totalSkips ?? data.skips.length;
+      renderUsers(); renderSkips(); renderNoteUsers();
+      await renderNotes(); await loadMine();
+    }
+
+    function renderUsers() {
+      const q = ($('userSearch').value || '').toLowerCase();
+      const users = (snapshot.users || []).filter(u => (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q));
+      $('usersBody').innerHTML = users.map(u => {
+        const ud = snapshot.userData?.[u.id] || {};
+        return `<tr>
+          <td>${esc(u.name || '—')}</td><td>${esc(u.email)}</td><td class="muted">${esc(u.device || '—')}</td>
+          <td><span class="pill">${(ud.notes || []).length}</span></td>
+          <td class="muted">${fmt(u.createdAt)}</td><td class="muted">${fmt(u.lastSeen)}</td>
+          <td style="white-space:nowrap">
+            <button class="btn ghost small" onclick="viewUser('${u.id}')">Notes</button>
+            <button class="btn ghost small" onclick="viewUserFull('${u.id}')">Details</button>
+            <button class="btn danger small" onclick="removeUser('${u.id}')">Delete</button>
+          </td></tr>`;
+      }).join('') || '<tr><td colspan="7" class="muted">No users yet</td></tr>';
+    }
+
+    function renderSkips() {
+      $('skipsBody').innerHTML = (snapshot.skips || []).slice().reverse().map(s =>
+        `<tr><td class="muted">${esc(s.device || '—')}</td><td class="muted">${fmt(s.at)}</td></tr>`
+      ).join('') || '<tr><td colspan="2" class="muted">No skips yet</td></tr>';
+    }
+
+    function renderNoteUsers() {
+      const sel = $('noteUser'); const prev = sel.value;
+      sel.innerHTML = (snapshot.users || []).map(u => `<option value="${u.id}">${esc(u.name || u.email)} — ${esc(u.email)}</option>`).join('');
+      if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
+    }
+
+    async function renderNotes() {
+      const uid = $('noteUser').value;
+      const q = ($('noteSearch').value || '').toLowerCase();
+      const notes = (snapshot.userData?.[uid]?.notes || []).filter(n => !n.trashed).filter(n => (n.title || '').toLowerCase().includes(q) || (n.content || '').toLowerCase().includes(q));
+      $('notesBody').innerHTML = notes.map(n => `<tr>
+        <td><strong>${esc(n.title || 'Untitled')}</strong></td>
+        <td class="muted">${esc((n.content || '').slice(0, 90))}</td>
+        <td class="muted">${fmt(n.updatedAt ? new Date(n.updatedAt).toISOString() : null)}</td>
+        <td style="white-space:nowrap">
+          <button class="btn ghost small" onclick="viewNote('${uid}','${n.id}')">View</button>
+          <button class="btn danger small" onclick="removeNote('${uid}','${n.id}')">Delete</button>
+        </td></tr>`).join('') || '<tr><td colspan="4" class="muted">No notes for this user</td></tr>';
+    }
+
+    function viewUser(id) { $('noteUser').value = id; switchTab('notes'); }
+
+    let currentDetail = null;
+    async function viewUserFull(id) {
+      try {
+        const d = await api('/api/admin/user/' + encodeURIComponent(id));
+        currentDetail = d;
+        const u = d.user, ud = d.userData || {};
+        $('detailHeading').textContent = (u.name || u.email) + ' — full record';
+        const pass = u.passwordHash ? 'Set (SHA-256 hash)' : 'Not set (signup-only)';
+        $('userMeta').innerHTML = [
+          ['ID', u.id], ['Name', u.name], ['Email', u.email], ['Device', u.device],
+          ['Created', fmt(u.createdAt)], ['Last seen', fmt(u.lastSeen)],
+          ['Password', pass], ['Notes stored', (ud.notes || []).length],
+          ['Folders stored', (ud.folders || []).length], ['Last sync', ud.lastSync ? fmt(new Date(ud.lastSync).toISOString()) : 'Never'],
+        ].map(([k, v]) => `<div class="k">${esc(k)}</div><div>${esc(v || '—')}</div>`).join('');
+        $('userFolders').innerHTML = (ud.folders || []).map(f => `<span class="folder-pill">${esc(f.name || 'Unnamed')}</span>`).join('') || '<span class="muted">No folders</span>';
+        $('userNotes').innerHTML = (ud.notes || []).map(n => `<div class="user-note">
+          <div class="t">${esc(n.title || 'Untitled')} <span class="muted" style="font-weight:400">· ${fmt(n.updatedAt ? new Date(n.updatedAt).toISOString() : null)}</span></div>
+          <div class="c">${esc(n.content || '(empty)')}</div>
+        </div>`).join('') || '<div class="muted">This user has not written any notes yet.</div>';
+        $('userModal').classList.remove('hidden');
+      } catch (e) { toast(e.message); }
+    }
+    function viewNote(uid, nid) {
+      const n = (snapshot.userData?.[uid]?.notes || []).find(x => x.id === nid); if (!n) return;
+      $('detailTitle').textContent = n.title || 'Untitled';
+      $('detailBody').textContent = n.content || '(empty)';
+      $('noteDetail').classList.remove('hidden');
+    }
+    async function removeUser(id) {
+      if (!confirm('Delete this user and ALL their synced notes? This cannot be undone.')) return;
+      try { await api('/api/admin/user/' + encodeURIComponent(id), { method: 'DELETE' }); toast('User deleted'); await load(); }
+      catch (e) { toast(e.message); }
+    }
+    async function removeNote(uid, nid) {
+      if (!confirm('Delete this note from the user\'s synced data?')) return;
+      try { await api('/api/admin/note/' + encodeURIComponent(uid) + '/' + encodeURIComponent(nid), { method: 'DELETE' }); toast('Note deleted'); await load(); }
+      catch (e) { toast(e.message); }
+    }
+    // Admin's own notes — the admin writes just like a normal user.
+    let myNotes = [];
+    let myNoteId = '';
+    async function loadMine() {
+      try {
+        const d = await api('/api/admin/notes');
+        myNotes = d.notes || [];
+        $('adminNoteList').innerHTML = myNotes.map(n => `<div class="user-note" style="cursor:pointer" onclick="editAdminNote('${n.id}')">
+          <div class="t">${esc(n.title || 'Untitled')}</div>
+          <div class="muted">${fmt(n.updatedAt ? new Date(n.updatedAt).toISOString() : null)}</div>
+        </div>`).join('') || '<div class="muted">No notes yet. Click + New note.</div>';
+        if (myNoteId && myNotes.some(n => n.id === myNoteId)) editAdminNote(myNoteId);
+      } catch (e) { $('mineStatus').textContent = e.message; }
+    }
+    function editAdminNote(id) {
+      const n = myNotes.find(x => x.id === id); if (!n) return;
+      myNoteId = id; $('adminNoteTitle').value = n.title || ''; $('adminNoteBody').value = n.content || '';
+      $('mineStatus').textContent = 'Editing saved note';
+    }
+    function newAdminNote() {
+      myNoteId = ''; $('adminNoteTitle').value = ''; $('adminNoteBody').value = '';
+      $('mineStatus').textContent = 'New note — click Save note';
+    }
+    async function saveAdminNote() {
+      try {
+        const d = await api('/api/admin/notes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: myNoteId || undefined, title: $('adminNoteTitle').value, content: $('adminNoteBody').value }) });
+        myNoteId = d.note.id; $('mineStatus').textContent = 'Saved ✓'; toast('Note saved');
+        await loadMine();
+      } catch (e) { toast(e.message); }
+    }
+    async function deleteAdminNote() {
+      if (!myNoteId) { newAdminNote(); return; }
+      if (!confirm('Delete this note?')) return;
+      try { await api('/api/admin/notes/' + encodeURIComponent(myNoteId), { method: 'DELETE' }); toast('Note deleted'); newAdminNote(); await loadMine(); }
+      catch (e) { toast(e.message); }
+    }
+
+    function switchTab(name) {
+      activeTab = name;
+      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+      ['users','notes','mine','skips'].forEach(t => $('tab-' + t).classList.toggle('hidden', t !== name));
+    }
+
+    $('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault(); $('loginErr').textContent = '';
+      try {
+        const data = await fetch('/api/admin/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({password:$('pw').value}) }).then(r => r.json());
+        if (!data.ok) { $('loginErr').textContent = data.error || 'Login failed'; return; }
+        token = data.token; localStorage.setItem('adminToken', token);
+        $('loginView').classList.add('hidden'); $('dashView').classList.remove('hidden');
+        await load();
+      } catch (err) { $('loginErr').textContent = 'Could not reach the server'; }
+    });
+    $('refreshBtn').addEventListener('click', () => load().then(() => toast('Refreshed')).catch(e => toast(e.message)));
+    $('logoutBtn').addEventListener('click', () => { localStorage.removeItem('adminToken'); token = ''; $('dashView').classList.add('hidden'); $('loginView').classList.remove('hidden'); });
+    $('exportBtn').addEventListener('click', async () => {
+      try {
+        const res = await fetch('/api/admin/export', { headers: headers() });
+        if (!res.ok) throw new Error('Export failed');
+        const blob = await res.blob(); const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob); a.download = 'notes-backup.json'; a.click();
+        URL.revokeObjectURL(a.href); toast('Backup downloaded');
+      } catch (e) { toast(e.message); }
+    });
+    document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
+    $('userSearch').addEventListener('input', renderUsers);
+    $('noteSearch').addEventListener('input', renderNotes);
+    $('noteUser').addEventListener('change', renderNotes);
+    $('closeDetail').addEventListener('click', () => $('noteDetail').classList.add('hidden'));
+    $('closeUserModal').addEventListener('click', () => $('userModal').classList.add('hidden'));
+    $('userModal').addEventListener('click', (e) => { if (e.target === $('userModal')) $('userModal').classList.add('hidden'); });
+    $('downloadUserBtn').addEventListener('click', () => {
+      if (!currentDetail) return;
+      const blob = new Blob([JSON.stringify(currentDetail, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = 'user-' + currentDetail.user.id + '.json'; a.click();
+      URL.revokeObjectURL(a.href); toast('User data downloaded');
+    });
+
+    $('newAdminNote').addEventListener('click', newAdminNote);
+    $('saveAdminNote').addEventListener('click', saveAdminNote);
+    $('deleteAdminNote').addEventListener('click', deleteAdminNote);
+
+    if (token) {
+      $('loginView').classList.add('hidden'); $('dashView').classList.remove('hidden');
+      load().catch(() => { localStorage.removeItem('adminToken'); token = ''; $('loginView').classList.remove('hidden'); $('dashView').classList.add('hidden'); });
+    }
+  </script>
+</body>
+</html>
